@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CAPTURE8">
+<meta name="theme-color" content="#0b0b12">
+<title>CAPTURE8 Photobooth</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Live camera layer (shared by all screens) -->
+<div id="stage">
+  <video id="video" playsinline muted autoplay></video>
+  <canvas id="preview"></canvas>
+</div>
+
+<!-- Hidden admin hotspot: long-press top-left corner -->
+<div id="adminHotspot" aria-hidden="true"></div>
+
+<!-- ============ WELCOME ============ -->
+<section id="screen-welcome" class="screen active">
+  <div class="welcome-bg" id="welcomeBg"></div>
+  <div class="welcome-shade"></div>
+  <div class="sparkles" aria-hidden="true"></div>
+  <div class="welcome-content">
+    <img id="welcomeLogo" class="welcome-logo hidden" alt="">
+    <h1 id="welcomeTitle">Selamat Datang!</h1>
+    <p id="welcomeSubtitle">Ayo abadikan momen seru kamu</p>
+    <div class="mode-buttons">
+      <button class="mode-card" data-mode="photo">
+        <span class="mode-icon">📸</span>
+        <span class="mode-name">Foto</span>
+        <span class="mode-desc" id="photoModeDesc">Photo strip siap cetak</span>
+      </button>
+      <button class="mode-card" data-mode="live" id="liveModeBtn">
+        <span class="mode-icon">✨</span>
+        <span class="mode-name">Live Photo</span>
+        <span class="mode-desc">Foto bergerak bolak-balik</span>
+      </button>
+    </div>
+    <p class="tap-hint" id="welcomeButtonText">Sentuh untuk Mulai</p>
+  </div>
+  <div class="counter-badge" id="sessionCounter"></div>
+</section>
+
+<!-- ============ TEMPLATE PICKER ============ -->
+<section id="screen-templates" class="screen">
+  <div class="panel-screen">
+    <h2>Pilih Frame Favoritmu</h2>
+    <div id="templateChoices" class="template-choices"></div>
+    <button class="btn ghost" data-action="home">← Kembali</button>
+  </div>
+</section>
+
+<!-- ============ CAPTURE ============ -->
+<section id="screen-capture" class="screen transparent">
+  <div class="capture-top"><span id="shotLabel" class="pill">Foto 1 dari 3</span></div>
+  <div id="getReady" class="get-ready hidden">
+    <div class="get-ready-title">Bersiap!</div>
+    <div class="get-ready-sub" id="getReadySub">Lihat ke kamera ya</div>
+  </div>
+  <div id="countdown" class="countdown"></div>
+  <div id="cheer" class="cheer hidden">Keren! 😍</div>
+  <div id="recordingBadge" class="recording hidden">● REC</div>
+  <div id="thumbs" class="thumbs"></div>
+  <button class="cancel-btn" data-action="home" aria-label="Batal">✕</button>
+</section>
+
+<!-- ============ PROCESSING ============ -->
+<section id="screen-processing" class="screen">
+  <div class="center-col">
+    <div class="spinner"></div>
+    <p id="processingText">Menyiapkan fotomu…</p>
+  </div>
+</section>
+
+<!-- ============ REVIEW ============ -->
+<section id="screen-review" class="screen">
+  <div class="review">
+    <div class="review-media">
+      <canvas id="reviewCanvas"></canvas>
+    </div>
+    <div class="review-side">
+      <h2>Hasil Fotomu 🎉</h2>
+      <div id="filterRow" class="filter-row"></div>
+      <div class="review-actions">
+        <button class="btn primary big" id="btnPrint">🖨️ Cetak</button>
+        <button class="btn primary big" id="btnShare">📲 AirDrop / Bagikan</button>
+        <button class="btn" id="btnRetake">🔄 Ulangi</button>
+        <button class="btn ghost" id="btnDone">Selesai</button>
+      </div>
+      <p class="review-note" id="reviewNote"></p>
+      <p class="auto-close" id="autoClose"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THANK YOU ============ -->
+<section id="screen-thanks" class="screen">
+  <div class="center-col">
+    <div class="thanks-emoji">💖</div>
+    <h1 id="thanksTitle">Terima kasih!</h1>
+    <p id="thanksSub">Sampai jumpa lagi</p>
+  </div>
+</section>
+
+<!-- ============ PIN ============ -->
+<div id="pinModal" class="modal hidden">
+  <div class="pin-box">
+    <h3>Masukkan PIN Admin</h3>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="pin-pad" id="pinPad"></div>
+    <button class="btn ghost" data-action="closePin">Batal</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN ============ -->
+<div id="adminModal" class="modal hidden">
+  <div class="admin">
+    <header class="admin-head">
+      <h2>⚙️ Pengaturan Photobooth</h2>
+      <button class="btn primary" data-action="closeAdmin">Simpan & Tutup</button>
+    </header>
+    <nav class="admin-tabs" id="adminTabs">
+      <button data-tab="general" class="active">Welcome</button>
+      <button data-tab="templates">Template</button>
+      <button data-tab="camera">Kamera</button>
+      <button data-tab="features">Fitur</button>
+      <button data-tab="gallery">Galeri</button>
+      <button data-tab="help">Bantuan</button>
+    </nav>
+    <div class="admin-body">
+
+      <div class="tab active" data-tab="general">
+        <label>Judul layar welcome<input data-key="eventName" type="text"></label>
+        <label>Sub-judul<input data-key="subtitle" type="text"></label>
+        <label>Teks ajakan<input data-key="buttonText" type="text"></label>
+        <label>Nama acara (ditulis di frame bawaan)<input data-key="frameTitle" type="text"></label>
+        <label>Warna tema<input data-key="themeColor" type="color"></label>
+        <div class="row">
+          <label class="file">🖼️ Background welcome (foto/video)
+            <input type="file" accept="image/*,video/*" id="upWelcomeBg"></label>
+          <button class="btn small" id="clearWelcomeBg">Hapus background</button>
+        </div>
+        <div class="row">
+          <label class="file">⭐ Logo
+            <input type="file" accept="image/*" id="upLogo"></label>
+          <button class="btn small" id="clearLogo">Hapus logo</button>
+        </div>
+        <p class="hint">Tanpa background, layar welcome menampilkan kamera live yang di-blur.</p>
+        <label>Teks layar terima kasih<input data-key="thanksText" type="text"></label>
+      </div>
+
+      <div class="tab" data-tab="templates">
+        <div class="callout">
+          <b>Cara membuat template sendiri (mis. di Canva):</b>
+          <ol>
+            <li>Buat desain ukuran <b>1200×1800 px</b> (cetak 4R/4×6) atau <b>600×1800 px</b> (strip 2×6).</li>
+            <li>Buat <b>lubang transparan</b> (kosong) di tempat foto akan muncul.</li>
+            <li>Download sebagai <b>PNG – Latar transparan</b>.</li>
+            <li>Upload di sini. Aplikasi akan <b>mendeteksi lubang foto otomatis</b>.</li>
+          </ol>
+        </div>
+        <label class="file big">➕ Upload Template PNG<input type="file" accept="image/png" id="upTemplate" multiple></label>
+        <div id="templateList" class="template-list"></div>
+      </div>
+
+      <div class="tab" data-tab="camera">
+        <label>Kamera
+          <select id="cameraSelect"></select></label>
+        <button class="btn small" id="refreshCameras">🔄 Cari kamera</button>
+        <label>Resolusi
+          <select data-key="resolution">
+            <option value="720">HD 720p</option>
+            <option value="1080">Full HD 1080p</option>
+            <option value="2160">4K (jika didukung)</option>
+          </select></label>
+        <label>Rotasi kamera
+          <select data-key="rotation">
+            <option value="0">0°</option><option value="90">90°</option>
+            <option value="180">180°</option><option value="270">270°</option>
+          </select></label>
+        <label class="check"><input type="checkbox" data-key="mirrorPreview"> Preview seperti cermin</label>
+        <label class="check"><input type="checkbox" data-key="mirrorPhoto"> Hasil foto juga dicerminkan</label>
+        <p class="hint" id="cameraInfo"></p>
+        <div class="callout">
+          <b>📷 Menghubungkan kamera DSLR/Mirrorless</b>
+          <ol>
+            <li>Siapkan <b>HDMI capture card USB</b> (USB-C, "UVC", tanpa driver; mis. Elgato Cam Link 4K atau capture card HDMI USB 4K generik).</li>
+            <li>Kamera → kabel HDMI → capture card → port USB-C iPad (pakai hub USB-C kalau iPad juga perlu dicas).</li>
+            <li>Di kamera: matikan tampilan info di layar HDMI ("HDMI info display: Off" / "Clean HDMI"), matikan auto power off, pakai mode video/live view.</li>
+            <li>Tekan "Cari kamera" lalu pilih kamera USB di daftar di atas.</li>
+          </ol>
+          Kamera mirrorless yang punya mode <b>USB Webcam (UVC)</b> bisa langsung dicolok tanpa capture card. Butuh iPad dengan port USB-C dan iPadOS 17 ke atas.
+        </div>
+      </div>
+
+      <div class="tab" data-tab="features">
+        <label>Hitung mundur
+          <select data-key="countdown">
+            <option value="3">3 detik</option><option value="5">5 detik</option><option value="10">10 detik</option>
+          </select></label>
+        <label>Jeda antar foto
+          <select data-key="betweenShots">
+            <option value="1">1 detik</option><option value="2">2 detik</option><option value="3">3 detik</option>
+          </select></label>
+        <label>Durasi Live Photo
+          <select data-key="liveSeconds">
+            <option value="1.5">1,5 detik</option><option value="2">2 detik</option><option value="3">3 detik</option>
+          </select></label>
+        <label>Kembali otomatis ke welcome setelah
+          <select data-key="idleTimeout">
+            <option value="30">30 detik</option><option value="60">60 detik</option>
+            <option value="90">90 detik</option><option value="120">2 menit</option>
+          </select></label>
+        <label class="check"><input type="checkbox" data-key="enableLive"> Mode Live Photo</label>
+        <label class="check"><input type="checkbox" data-key="enablePrint"> Tombol Cetak</label>
+        <label class="check"><input type="checkbox" data-key="enableShare"> Tombol AirDrop / Bagikan</label>
+        <label class="check"><input type="checkbox" data-key="enableFilters"> Pilihan filter</label>
+        <label class="check"><input type="checkbox" data-key="enableRetake"> Tombol Ulangi</label>
+        <label class="check"><input type="checkbox" data-key="sound"> Suara hitung mundur & shutter</label>
+        <label class="check"><input type="checkbox" data-key="flash"> Efek flash layar putih</label>
+        <label class="check"><input type="checkbox" data-key="showCounter"> Tampilkan jumlah sesi di welcome</label>
+        <label>Batas cetak per sesi
+          <select data-key="maxPrints">
+            <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="99">Tanpa batas</option>
+          </select></label>
+        <label>PIN admin (4 angka)<input data-key="pin" type="text" inputmode="numeric" maxlength="4" pattern="\d{4}"></label>
+        <button class="btn small" id="btnFullscreen">⛶ Layar penuh</button>
+      </div>
+
+      <div class="tab" data-tab="gallery">
+        <p id="galleryStats" class="hint"></p>
+        <div class="row">
+          <button class="btn small" id="shareAll">📤 Bagikan / simpan semua</button>
+          <button class="btn small danger" id="deleteAll">🗑️ Hapus semua</button>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </div>
+
+      <div class="tab" data-tab="help">
+        <div class="callout">
+          <b>1. Pasang seperti aplikasi</b>
+          <ol><li>Buka link aplikasi di <b>Safari</b> iPad.</li>
+          <li>Tekan tombol <b>Bagikan</b> (kotak dengan panah) → <b>Tambah ke Layar Utama</b>.</li>
+          <li>Buka dari ikon CAPTURE8 di layar utama → tampil layar penuh.</li></ol>
+        </div>
+        <div class="callout">
+          <b>2. Kunci iPad agar tamu tidak keluar aplikasi (Guided Access)</b>
+          <ol><li>Pengaturan → Aksesibilitas → <b>Akses Terpandu</b> → Nyalakan, atur kode sandi.</li>
+          <li>Buka CAPTURE8, tekan tombol samping/Home <b>3 kali</b> → Mulai.</li>
+          <li>Untuk keluar: tekan 3 kali lagi lalu masukkan kode.</li></ol>
+        </div>
+        <div class="callout">
+          <b>3. Printer</b>
+          <p>Gunakan printer foto yang mendukung <b>AirPrint</b> (mis. Canon SELPHY CP1500) di Wi-Fi yang sama dengan iPad. Saat tombol Cetak ditekan, pilih printer & ukuran kertas 4×6 / 10×15 cm.</p>
+        </div>
+        <div class="callout">
+          <b>4. Masuk ke pengaturan</b>
+          <p>Tekan dan tahan <b>pojok kiri atas</b> layar selama 2 detik, lalu masukkan PIN (awal: <b>1234</b>). Ganti PIN di tab Fitur.</p>
+        </div>
+        <div class="callout">
+          <b>5. Data foto</b>
+          <p>Semua foto disimpan <b>hanya di iPad ini</b> (tidak diupload ke internet). Ambil semua foto lewat tab Galeri → Bagikan semua (AirDrop ke Mac/iPhone, atau Simpan ke File).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<div id="flash" class="flash"></div>
+<div id="printArea"><img id="printImg" alt=""></div>
+
+<script src="app.js"></script>
+</body>
+</html>
