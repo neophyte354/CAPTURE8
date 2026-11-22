@@ -61,6 +61,12 @@ dengan bahasa sederhana, jangan pakai istilah teknis tanpa penjelasan.
 
 ## Catatan
 
+- Jaringan cloud: model Whisper diunduh dari `huggingface.co` dan diarahkan ke
+  `us.aws.cdn.hf.co` (keduanya sudah diizinkan di environment CAPTURE8).
+  YouTube butuh akses ke banyak alamat `*.googlevideo.com` yang tidak bisa
+  di-allowlist satu per satu, dan YouTube sering memblokir server cloud. Jika
+  link gagal, minta user mengunggah file videonya.
+
 - Audio otomatis dinormalkan ke -14 LUFS (standar volume TikTok/Reels/Shorts).
 - Output: MP4 H.264 1080x1920 30fps — diterima semua platform.
 - Jangan commit file video ke git; hanya script dan catatan.
